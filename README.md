@@ -15,6 +15,7 @@ The goal is not only to create a working API, but also to demonstrate production
 - Environment-based configuration
 - Request logging middleware
 - Nginx access and error logging
+- Nginx rate limiting
 - Custom Nginx log format
 - Upstream response time tracking
 - Proxy headers
@@ -190,6 +191,73 @@ Compression is handled at the reverse proxy layer rather than inside the FastAPI
 
 This allows the application to remain responsible only for generating the response, while Nginx handles transport-level optimization.
 
+### Rate Limiting
+
+Nginx limits the request rate before requests reach the FastAPI application.
+
+The rate limiter is configured using `limit_req_zone`:
+
+```nginx
+limit_req_zone $binary_remote_addr zone=api_limit:10m rate=10r/s;
+```
+
+The configuration uses the client's IP address as the rate-limiting key.
+
+`api_limit` is the name of the shared memory zone used by Nginx to store the state required for rate limiting.
+
+The zone has a size of 10 MB.
+
+The configured rate is:
+
+```text
+10 requests per second per client IP
+```
+
+The limiter is applied to API requests using:
+
+```nginx
+limit_req zone=api_limit burst=20 nodelay;
+```
+
+`burst` allows a temporary spike of requests above the configured rate.
+
+`nodelay` prevents requests within the allowed burst from being artificially delayed. Requests that exceed the available burst capacity are rejected immediately.
+
+The project explicitly configures the HTTP status returned when the rate limit is exceeded:
+
+```nginx
+limit_req_status 429;
+```
+
+Therefore, clients exceeding the configured limit receive:
+
+```http
+HTTP/1.1 429 Too Many Requests
+```
+
+Rate limiting is performed by Nginx before `proxy_pass`, so rejected requests do not reach FastAPI.
+
+This provides an infrastructure-level protection mechanism without requiring the application to process every incoming request.
+
+### Rate Limiting Flow
+
+```text
+Client
+   |
+   | HTTP request
+   v
+Nginx
+   |
+   +---- rate limit exceeded ----> 429 Too Many Requests
+   |
+   | request allowed
+   v
+proxy_pass
+   |
+   v
+FastAPI
+```
+
 ### Separation of Responsibilities
 
 The architecture intentionally separates application and infrastructure concerns.
@@ -228,7 +296,8 @@ This separation keeps infrastructure-level concerns outside the application busi
                     │ Reverse Proxy    │
                     │ Logging          │
                     │ Security Headers │
-                    │ Gzip             │
+                    │ Gzip             |
+                    | Rate Limiting    │
                     └────────┬─────────┘
                              │
                              │ Docker network
@@ -256,5 +325,5 @@ This separation keeps infrastructure-level concerns outside the application busi
 - [x] Upstream response time tracking
 - [x] HTTP security headers
 - [x] Gzip compression
-- [ ] Rate limiting
+- [x] Rate limiting
 - [ ] Production hardening
