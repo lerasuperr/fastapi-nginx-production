@@ -14,6 +14,9 @@ The goal is not only to create a working API, but also to demonstrate production
 - Nginx reverse proxy
 - Environment-based configuration
 - Request logging middleware
+- Nginx access and error logging
+- Custom Nginx log format
+- Upstream response time tracking
 
 ## Technology Stack
 
@@ -30,6 +33,8 @@ The goal is not only to create a working API, but also to demonstrate production
 - [x] Docker support
 - [x] Docker Compose
 - [x] Reverse proxy with Nginx
+- [x] Nginx access and error logging
+- [x] Custom log format
 - [ ] Proxy headers
 - [ ] Nginx logging
 - [ ] Gzip compression
