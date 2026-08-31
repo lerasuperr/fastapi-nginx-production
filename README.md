@@ -11,6 +11,8 @@ The goal is not only to create a working API, but also to demonstrate production
 - FastAPI application
 - Dockerized environment
 - Docker Compose orchestration
+- Docker healthcheck
+- Graceful shutdown configuration
 - Nginx reverse proxy
 - Environment-based configuration
 - Request logging middleware
@@ -326,4 +328,7 @@ This separation keeps infrastructure-level concerns outside the application busi
 - [x] HTTP security headers
 - [x] Gzip compression
 - [x] Rate limiting
+- [x] Docker healthcheck
+- [x] Graceful shutdown
+- [ ] Network segmentation
 - [ ] Production hardening

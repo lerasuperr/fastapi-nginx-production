@@ -1,11 +1,10 @@
 services:
-
   api:
     build: .
     container_name: api_gateway
 
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
 
     volumes:
       - .:/app
@@ -14,6 +13,21 @@ services:
       - .env
 
     restart: unless-stopped
+
+    stop_grace_period: 30s
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
 
   nginx:
     image: nginx:latest
@@ -27,6 +41,7 @@ services:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
 
     depends_on:
-      - api
+      api:
+        condition: service_healthy
 
     restart: unless-stopped
