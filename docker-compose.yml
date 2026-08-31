@@ -9,8 +9,16 @@ services:
     expose:
       - "8000"
 
-    volumes:
-      - .:/app
+    read_only: true
+
+    tmpfs:
+      - /tmp
+
+    cap_drop:
+      - ALL
+    
+    mem_limit: 512m
+    cpus: "1.0"
 
     env_file:
       - .env

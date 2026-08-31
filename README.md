@@ -28,6 +28,10 @@ The goal is not only to create a working API, but also to demonstrate production
 - Docker image hardening
 - Non-root container execution
 - Pinned base image versions
+- Read-only container filesystem
+- Temporary filesystem for runtime data
+- Linux capability restrictions
+- Container resource limits
 
 ## Technology Stack
 
@@ -45,6 +49,17 @@ The API container runs as a non-root user to reduce the impact of a potential co
 Docker images use explicitly pinned base image versions instead of floating `latest` tags to improve build reproducibility.
 
 The Docker build context is restricted with `.dockerignore`, preventing development files, environment files, Git metadata, virtual environments and documentation from being included in the application image.
+
+## Container Hardening
+
+The API container runs with a reduced security and resource footprint:
+
+- Runs as a non-root user.
+- Uses a read-only root filesystem.
+- Provides a writable `/tmp` directory through `tmpfs` for temporary runtime data.
+- Drops all Linux capabilities that are not required by the application.
+- Applies CPU and memory limits to prevent uncontrolled resource consumption.
+- Uses pinned base image versions for more reproducible builds.
 
 ## Network Architecture
 
@@ -358,4 +373,7 @@ This separation keeps infrastructure-level concerns outside the application busi
 - [x] Docker image hardening
 - [x] Non-root container execution
 - [x] Pinned base image versions
+- [x] Read-only container filesystem
+- [x] Linux capability restrictions
+- [x] Container resource limits
 - [ ] Production hardening
