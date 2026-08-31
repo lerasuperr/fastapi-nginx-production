@@ -33,7 +33,7 @@ services:
       start_period: 5s
 
   nginx:
-    image: nginx:latest
+    image: nginx:1.31.3
     container_name: nginx
 
     networks:

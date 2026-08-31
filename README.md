@@ -25,6 +25,9 @@ The goal is not only to create a working API, but also to demonstrate production
 - Gzip response compression
 - Docker network segmentation
 - Isolated backend network
+- Docker image hardening
+- Non-root container execution
+- Pinned base image versions
 
 ## Technology Stack
 
@@ -34,6 +37,14 @@ The goal is not only to create a working API, but also to demonstrate production
 - Docker
 - Docker Compose
 - Nginx
+
+## Docker Security
+
+The API container runs as a non-root user to reduce the impact of a potential container compromise.
+
+Docker images use explicitly pinned base image versions instead of floating `latest` tags to improve build reproducibility.
+
+The Docker build context is restricted with `.dockerignore`, preventing development files, environment files, Git metadata, virtual environments and documentation from being included in the application image.
 
 ## Network Architecture
 
@@ -344,4 +355,7 @@ This separation keeps infrastructure-level concerns outside the application busi
 - [x] Docker healthcheck
 - [x] Graceful shutdown
 - [x] Network segmentation
+- [x] Docker image hardening
+- [x] Non-root container execution
+- [x] Pinned base image versions
 - [ ] Production hardening
