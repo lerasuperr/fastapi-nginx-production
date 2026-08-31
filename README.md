@@ -23,6 +23,8 @@ The goal is not only to create a working API, but also to demonstrate production
 - Proxy headers
 - HTTP security headers
 - Gzip response compression
+- Docker network segmentation
+- Isolated backend network
 
 ## Technology Stack
 
@@ -32,6 +34,17 @@ The goal is not only to create a working API, but also to demonstrate production
 - Docker
 - Docker Compose
 - Nginx
+
+## Network Architecture
+
+The project uses separate Docker networks to isolate internal services from the reverse proxy layer.
+
+- `proxy` network — external-facing Nginx network.
+- `backend` network — internal network for application services.
+- Nginx is connected to both networks.
+- FastAPI is connected only to the `backend` network.
+- The backend network is marked as `internal`, preventing external network access.
+- FastAPI is not published directly to the host and is reachable through Nginx.
 
 ## Nginx Configuration
 
@@ -330,5 +343,5 @@ This separation keeps infrastructure-level concerns outside the application busi
 - [x] Rate limiting
 - [x] Docker healthcheck
 - [x] Graceful shutdown
-- [ ] Network segmentation
+- [x] Network segmentation
 - [ ] Production hardening

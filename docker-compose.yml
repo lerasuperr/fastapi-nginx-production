@@ -3,6 +3,9 @@ services:
     build: .
     container_name: api_gateway
 
+    networks:
+      - backend
+
     expose:
       - "8000"
 
@@ -33,6 +36,10 @@ services:
     image: nginx:latest
     container_name: nginx
 
+    networks:
+      - proxy
+      - backend
+
     ports:
       - "80:80"
 
@@ -45,3 +52,12 @@ services:
         condition: service_healthy
 
     restart: unless-stopped
+
+networks:
+
+  proxy:
+    driver: bridge
+
+  backend:
+    driver: bridge
+    internal: true
