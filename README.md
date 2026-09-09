@@ -32,15 +32,24 @@ The goal is not only to create a working API, but also to demonstrate production
 - Temporary filesystem for runtime data
 - Linux capability restrictions
 - Container resource limits
+- Prometheus application metrics
+- Grafana monitoring dashboard
+- Request rate monitoring
+- 5xx error rate monitoring
+- p95 HTTP latency monitoring
+- Grafana alerting
 
 ## Technology Stack
 
-- Python 3.13
+- Python 3.12
 - FastAPI
 - Uvicorn
 - Docker
 - Docker Compose
 - Nginx
+- Prometheus
+- Grafana
+- prometheus-client
 
 ## Docker Security
 
@@ -299,6 +308,121 @@ proxy_pass
 FastAPI
 ```
 
+## Monitoring
+
+The project includes application monitoring using Prometheus and Grafana.
+
+FastAPI exposes application metrics through the `/metrics` endpoint. Prometheus periodically scrapes this endpoint and stores the collected data as time series.
+
+Grafana is used to query, visualize and monitor these metrics.
+
+### Application Metrics
+
+The application exposes the following custom metrics:
+
+#### Request Counter
+
+```text
+api_requests_total
+```
+
+A Prometheus counter that tracks the total number of HTTP requests grouped by HTTP method and response status.
+
+Example:
+
+```text
+api_requests_total{method="GET",status="200"}
+```
+
+The counter is monotonically increasing during the lifetime of the application process.
+
+#### Request Latency Histogram
+
+```text
+api_request_duration_seconds
+```
+
+A Prometheus histogram that records HTTP request duration in seconds.
+
+The histogram is used to calculate latency percentiles such as p95.
+
+The `/metrics` endpoint itself is excluded from these application metrics to prevent Prometheus scraping from affecting request statistics.
+
+### Monitoring Dashboard
+
+Grafana provides a dashboard with the following panels:
+
+- Request Rate (RPS)
+- 5xx Error Rate
+- HTTP Latency (p95)
+
+### PromQL Examples
+
+Request rate:
+
+```promql
+sum(rate(api_requests_total[5m]))
+```
+
+5xx error rate:
+
+```promql
+sum(rate(api_requests_total{status=~"5.."}[5m]))
+```
+
+p95 HTTP latency:
+
+```promql
+histogram_quantile(
+  0.95,
+  sum by (le) (
+    rate(api_request_duration_seconds_bucket[5m])
+  )
+)
+```
+
+### Alerting
+
+Grafana alert rules are configured for:
+
+- high 5xx error rate;
+- high p95 HTTP latency.
+
+Alert rules are evaluated every 1 minute.
+
+A 5-minute pending period is used before an alert transitions to the firing state. This prevents short-lived metric spikes from immediately triggering an alert.
+
+### Monitoring Architecture
+
+```text
+                    ┌──────────────────┐
+                    │     FastAPI      │
+                    │                  │
+                    │    /metrics      │
+                    └────────┬─────────┘
+                             │
+                             │ scrape
+                             │
+                             ▼
+                    ┌──────────────────┐
+                    │    Prometheus    │
+                    │                  │
+                    │ Time-series data │
+                    │     PromQL       │
+                    └────────┬─────────┘
+                             │
+                             │ query
+                             ▼
+                    ┌──────────────────┐
+                    │     Grafana      │
+                    │                  │
+                    │    Dashboard     │
+                    │     Alerting     │
+                    └──────────────────┘
+```
+
+Prometheus pulls metrics from FastAPI. Grafana queries Prometheus and uses the returned time-series data for dashboards and alerting.
+
 ### Separation of Responsibilities
 
 The architecture intentionally separates application and infrastructure concerns.
@@ -320,39 +444,78 @@ Nginx is responsible for:
 - HTTP security headers;
 - response compression.
 
+Prometheus is responsible for:
+
+- scraping application metrics;
+- storing time-series data;
+- providing PromQL queries.
+
+Grafana is responsible for:
+
+- metrics visualization;
+- dashboards;
+- alerting.
+
 This separation keeps infrastructure-level concerns outside the application business logic and makes the architecture easier to extend and operate.
 
 ### Current Architecture
 
 ```text
-                    ┌──────────────────┐
-                    │      Client      │
-                    └────────┬─────────┘
-                             │
-                             │ HTTP :80
-                             ▼
-                    ┌──────────────────┐
-                    │      Nginx       │
-                    │                  │
-                    │ Reverse Proxy    │
-                    │ Logging          │
-                    │ Security Headers │
-                    │ Gzip             |
-                    | Rate Limiting    │
-                    └────────┬─────────┘
-                             │
-                             │ Docker network
-                             │ http://api:8000
-                             ▼
-                    ┌──────────────────┐
-                    │     FastAPI      │
-                    │                  │
-                    │ Routing          │
-                    │ Business Logic   │
-                    │ Validation       │
-                    │ Response         │
-                    └──────────────────┘
+                              HOST
+                               │
+                 ┌─────────────┴─────────────┐
+                 │                           │
+              HTTP :80                   HTTP :3000
+                 │                           │
+                 ▼                           ▼
+        ┌─────────────────┐          ┌─────────────────┐
+        │      Nginx      │          │     Grafana     │
+        │                 │          │                 │
+        │ Reverse Proxy   │          │ Dashboard       │
+        │ Logging         │          │ Alerting        │
+        │ Security        │          └────────┬────────┘
+        │ Gzip            │                   │
+        │ Rate Limiting   │                   │ PromQL
+        └────────┬────────┘                   │
+                 │                            ▼
+                 │ backend network     ┌─────────────────┐
+                 ▼                     │   Prometheus    │
+        ┌─────────────────┐            │                 │
+        │     FastAPI     │◄───────────┤ Time-series DB  │
+        │                 │   scrape   │ PromQL          │
+        │ Routing         │            └─────────────────┘
+        │ Business Logic  │
+        │ Validation      │
+        │ /metrics        │
+        └─────────────────┘
 ```
+
+### Docker Networks
+
+```text
+proxy network
+     │
+     ▼
+   Nginx
+     │
+     │
+backend network (internal)
+     │
+     ▼
+  FastAPI
+
+monitoring network
+     │
+     ├──────────────► Prometheus
+     │
+     └──────────────► Grafana
+
+Prometheus is also connected to the backend network so it can scrape FastAPI.
+```
+
+FastAPI is not published directly to the host. Nginx provides the public HTTP entry point for the API.
+
+Prometheus and Grafana are exposed only on localhost in the local development setup. They are not part of the public API request path.
 
 ## Project Progress
 
@@ -376,4 +539,12 @@ This separation keeps infrastructure-level concerns outside the application busi
 - [x] Read-only container filesystem
 - [x] Linux capability restrictions
 - [x] Container resource limits
+- [x] Prometheus application metrics
+- [x] Grafana monitoring dashboard
+- [x] Request rate monitoring
+- [x] 5xx error rate monitoring
+- [x] p95 HTTP latency monitoring
+- [x] Grafana alerting
+- [x] Alert evaluation every 1 minute
+- [x] Alert testing
 - [ ] Production hardening

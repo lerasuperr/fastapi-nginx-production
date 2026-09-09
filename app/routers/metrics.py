@@ -1,4 +1,6 @@
 from fastapi import APIRouter
+from fastapi.responses import PlainTextResponse
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 router = APIRouter(
     prefix="/metrics",
@@ -6,9 +8,9 @@ router = APIRouter(
 )
 
 
-@router.get("")
+@router.get("", response_class=PlainTextResponse)
 async def metrics():
-    return {
-        "requests": 1524,
-        "uptime": "12h"
-    }
+   return PlainTextResponse(
+        generate_latest(),
+        media_type=CONTENT_TYPE_LATEST,
+    )

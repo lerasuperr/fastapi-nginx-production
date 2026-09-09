@@ -1,6 +1,20 @@
 import time
 
 from fastapi import Request
+from prometheus_client import Counter, Histogram
+
+
+REQUEST_COUNT = Counter(
+    "api_requests_total",
+    "Total number of HTTP requests",
+    ["method", "status"],
+)
+
+REQUEST_LATENCY = Histogram(
+    "api_request_duration_seconds",
+    "HTTP request duration in seconds",
+    ["method"],
+)
 
 
 async def log_requests(request: Request, call_next):
@@ -8,13 +22,21 @@ async def log_requests(request: Request, call_next):
 
     response = await call_next(request)
 
-    process_time = time.perf_counter() - start_time
+    duration = time.perf_counter() - start_time
+
+    if request.url.path != "/metrics":
+        REQUEST_COUNT.labels(
+            method=request.method,
+            status=response.status_code,
+        ).inc()
+
+        REQUEST_LATENCY.labels(
+            method=request.method,
+        ).observe(duration)
 
     print(
-        f"{request.method} "
-        f"{request.url.path} "
-        f"{response.status_code} "
-        f"{process_time:.4f}s"
+        f"{request.method} {request.url.path} "
+        f"{response.status_code} {duration:.4f}s"
     )
 
     return response
