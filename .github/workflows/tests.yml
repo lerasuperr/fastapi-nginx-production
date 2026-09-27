@@ -56,4 +56,25 @@ jobs:
       - name: Check formatting
         run: |
           python -m ruff format --check .
+
+  build:
+    needs:
+      - tests
+      - quality
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          tags: fastapi-nginx-production:ci
           
