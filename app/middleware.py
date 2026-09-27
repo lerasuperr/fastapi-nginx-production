@@ -34,9 +34,6 @@ async def log_requests(request: Request, call_next):
             method=request.method,
         ).observe(duration)
 
-    print(
-        f"{request.method} {request.url.path} "
-        f"{response.status_code} {duration:.4f}s"
-    )
+    print(f"{request.method} {request.url.path} {response.status_code} {duration:.4f}s")
 
     return response

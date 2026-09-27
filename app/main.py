@@ -10,7 +10,7 @@ from app.middleware import log_requests
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
-    description="Production-oriented FastAPI service behind Nginx."
+    description="Production-oriented FastAPI service behind Nginx.",
 )
 
 app.middleware("http")(log_requests)

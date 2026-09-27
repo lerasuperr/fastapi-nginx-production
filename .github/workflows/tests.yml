@@ -33,3 +33,7 @@ jobs:
       - name: Run lint
         run: |
           python -m ruff check .
+      
+      - name: Check formatting
+        run: |
+          python -m ruff format --check .
