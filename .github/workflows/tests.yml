@@ -76,5 +76,14 @@ jobs:
         with:
           context: .
           push: false
+          load: true
           tags: fastapi-nginx-production:ci
+          
+      - name: Scan Docker image
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: fastapi-nginx-production:ci
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          ignore-unfixed: true
           
