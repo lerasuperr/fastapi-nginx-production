@@ -70,6 +70,80 @@ The API container runs with a reduced security and resource footprint:
 - Applies CPU and memory limits to prevent uncontrolled resource consumption.
 - Uses pinned base image versions for more reproducible builds.
 
+## Dependencies
+
+The project separates runtime and development dependencies.
+
+`requirements.txt` contains only dependencies required to run the application in production.
+
+`requirements-dev.txt` includes `requirements.txt` and adds development and CI dependencies such as:
+
+- pytest
+- Ruff
+- HTTPX
+
+This prevents development tools from being included in the production Docker image.
+
+## CI/CD
+
+GitHub Actions runs automatically on pushes to `main` and pull requests targeting `main`.
+
+The CI pipeline is divided into separate stages:
+
+- Tests — runs the pytest test suite.
+- Quality — runs Ruff linting and formatting checks.
+- Build — builds the Docker image.
+- Security — scans the Docker image with Trivy for HIGH and CRITICAL vulnerabilities.
+
+The Docker image is built only after tests and quality checks pass.
+
+The Trivy scan fails the pipeline when a fixable HIGH or CRITICAL vulnerability is detected.
+
+Unfixed vulnerabilities are ignored using `ignore-unfixed`, because there is no available patched version to apply.
+
+## Docker Image Optimization
+
+The Dockerfile is structured to take advantage of Docker layer caching.
+
+The dependency file is copied before the application source:
+
+```dockerfile
+COPY requirements.txt .
+
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY app ./app
+```
+
+This allows Docker to reuse the dependency installation layer when only application source code changes.
+
+The production image contains runtime dependencies only. Development and testing tools are installed separately in CI.
+
+The current production image is based on:
+
+```dockerfile
+FROM python:3.12-slim-bookworm
+```
+
+The explicit Debian `bookworm` base improves build reproducibility compared with a floating base tag.
+
+## Security Scanning
+
+Docker images are scanned with Trivy during CI.
+
+The scan checks for HIGH and CRITICAL vulnerabilities in the resulting image.
+
+The project also uses:
+
+- non-root container execution;
+- read-only root filesystem;
+- temporary writable `/tmp`;
+- dropped Linux capabilities;
+- CPU and memory limits;
+- pinned base image family;
+- restricted Docker build context;
+- separated production and development dependencies.
+
 ## Network Architecture
 
 The project uses separate Docker networks to isolate internal services from the reverse proxy layer.
@@ -547,4 +621,10 @@ Prometheus and Grafana are exposed only on localhost in the local development se
 - [x] Grafana alerting
 - [x] Alert evaluation every 1 minute
 - [x] Alert testing
-- [ ] Production hardening
+- [x] Production hardening
+- [x] Production/development dependency separation
+- [x] CI pipeline
+- [x] Ruff linting and formatting
+- [x] Docker image build validation
+- [x] Trivy vulnerability scanning
+- [ ] SBOM generation
