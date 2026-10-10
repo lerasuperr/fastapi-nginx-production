@@ -27,7 +27,7 @@ The goal is not only to create a working API, but also to demonstrate production
 - Isolated backend network
 - Docker image hardening
 - Non-root container execution
-- Pinned base image versions
+- Explicit base image tags
 - Read-only container filesystem
 - Temporary filesystem for runtime data
 - Linux capability restrictions
@@ -38,6 +38,12 @@ The goal is not only to create a working API, but also to demonstrate production
 - 5xx error rate monitoring
 - p95 HTTP latency monitoring
 - Grafana alerting
+- GitHub Actions CI pipeline
+- Automated test execution
+- Ruff linting and formatting checks
+- Docker image build validation
+- Trivy vulnerability scanning
+- SBOM generation
 
 ## Technology Stack
 
@@ -627,4 +633,4 @@ Prometheus and Grafana are exposed only on localhost in the local development se
 - [x] Ruff linting and formatting
 - [x] Docker image build validation
 - [x] Trivy vulnerability scanning
-- [ ] SBOM generation
+- [x] SBOM generation
